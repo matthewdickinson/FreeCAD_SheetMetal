@@ -701,16 +701,18 @@ class SheetTree(object):
           
           distVector = counterMiddle.sub(faceMiddle)
           counterDistance = distVector.Length
-          
-          if counterDistance < 3*self.__thickness:
-            SMLog("found counter-face", i + 1)
+
+          if counterDistance < self.__thickness:
+          # if counterDistance < 3*self.__thickness:
+            SMLog("found counter-face Face", i + 1, " for Face", face_idx +1, " with counterDistance of ", counterDistance)
             newNode.c_face_idx = i
             self.index_list.remove(i)
             newNode.nfIndexes.append(i)
-            
+            break
             # Part.show(self.__Shape.Faces[newNode.c_face_idx])
           else:
             counter_found = False
+            SMLog("found false counter-face Face", i+1, " for Face", face_idx+1, " with counterDistance of ", counterDistance)
             SMLog("faceMiddle: ", str(faceMiddle), "counterMiddle: ", str(counterMiddle))
       #if newNode.c_face_idx == None:
       #  Part.show(axis_line)
@@ -790,37 +792,32 @@ class SheetTree(object):
       parPos01 = self.__Shape.Faces[face_idx].valueAt(angle_0,length_1)
       parPos10 = self.__Shape.Faces[face_idx].valueAt(angle_1,length_0)
       parPos11 = self.__Shape.Faces[face_idx].valueAt(angle_1,length_1)
-      
-      if equal_vector(edge_vec, parPos00):
         SMLog("got case 00")
         angle_start = angle_0
         angle_end = angle_1
         len_start = length_0
+      elif equal_vector(edge_vec, parPos01):
+        SMLog("got case 01")
+        angle_start = angle_0
+        angle_end = angle_1
+        len_start = length_1
+      elif equal_vector(edge_vec, parPos10):
+        SMLog("got case 10")
+        angle_start = angle_1
+        angle_end = angle_0
+        len_start = length_0
+      elif equal_vector(edge_vec, parPos11):
+        SMLog("got case 11")
+        angle_start = angle_1
+        angle_end = angle_0
+        len_start = length_1
       else:
-        if equal_vector(edge_vec, parPos01):
-          SMLog("got case 01")
-          angle_start = angle_0
-          angle_end = angle_1
-          len_start = length_1
-        else:
-          if equal_vector(edge_vec, parPos10):
-            SMLog("got case 10")
-            angle_start = angle_1
-            angle_end = angle_0
-            len_start = length_0
-          else:
-            if equal_vector(edge_vec, parPos11):
-              SMLog("got case 11")
-              angle_start = angle_1
-              angle_end = angle_0
-              len_start = length_1
-            else:
-              newNode.analysis_ok = False
-              newNode.error_code = 16 # Analysis: did not find startangle of bend
-              self.error_code = 16
-              self.failed_face_idx = face_idx
-              SMError("did not found start angle, to do to fix")
-              return
+        newNode.analysis_ok = False
+        newNode.error_code = 16 # Analysis: did not find startangle of bend
+        self.error_code = 16
+        self.failed_face_idx = face_idx
+        SMError("did not found start angle, to do to fix")
+        return
 
       newNode.bend_angle = angle_end - angle_start
       if newNode.bend_angle < 0.0:
