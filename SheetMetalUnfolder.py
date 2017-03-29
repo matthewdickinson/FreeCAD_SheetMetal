@@ -122,6 +122,15 @@ def equal_vector(vec1, vec2, p=5):
   # compares two vectors 
   return (round(vec1.x - vec2.x,p)==0 and round(vec1.y - vec2.y,p)==0 and round(vec1.z - vec2.z,p)==0)
 
+def vector_diff(vec1, vec2, debug = False):
+  # compares two vectors
+  if (debug) :
+    SMLog("x: {} {}".format(vec1.x, vec2.x))
+    SMLog("y: {} {}".format(vec1.y, vec2.y))
+    SMLog("z: {} {}".format(vec1.z, vec2.z))
+
+  return abs(vec1.x - vec2.x) + abs(vec1.y - vec2.y) + abs(vec1.z - vec2.z)
+
 def radial_vector(point, axis_pnt, axis):
   chord = axis_pnt.sub(point)
   norm = axis.cross(chord)
@@ -807,25 +816,36 @@ class SheetTree(object):
       parPos01 = self.__Shape.Faces[face_idx].valueAt(angle_0,length_1)
       parPos10 = self.__Shape.Faces[face_idx].valueAt(angle_1,length_0)
       parPos11 = self.__Shape.Faces[face_idx].valueAt(angle_1,length_1)
-        SMLog("got case 00")
-        angle_start = angle_0
-        angle_end = angle_1
-        len_start = length_0
-      elif equal_vector(edge_vec, parPos01):
-        SMLog("got case 01")
-        angle_start = angle_0
-        angle_end = angle_1
-        len_start = length_1
-      elif equal_vector(edge_vec, parPos10):
-        SMLog("got case 10")
-        angle_start = angle_1
-        angle_end = angle_0
-        len_start = length_0
-      elif equal_vector(edge_vec, parPos11):
-        SMLog("got case 11")
-        angle_start = angle_1
-        angle_end = angle_0
-        len_start = length_1
+
+      is_debug = face_idx == 45 or face_idx == 51
+
+      vector_options = []
+
+      vector_options.append((vector_diff(edge_vec, parPos00, True),\
+        angle_0, \
+        angle_1, \
+        length_0, parPos00))
+      vector_options.append((vector_diff(edge_vec, parPos01, True),\
+        angle_0, \
+        angle_1, \
+        length_1, parPos01))
+      vector_options.append((vector_diff(edge_vec, parPos10, True),\
+        angle_1, \
+        angle_0, \
+        length_0, parPos10))
+      vector_options.append((vector_diff(edge_vec, parPos11, True),\
+        angle_1, \
+        angle_0, \
+        length_1, parPos11))
+
+      vector_options.sort(key=lambda opt:opt[0])
+      closest_option = vector_options[0]
+
+      if closest_option[0] < 7:
+        SMLog("selected vec: {} - {}".format(closest_option[4], closest_option[0]))
+        angle_start = closest_option[1]
+        angle_end = closest_option[2]
+        len_start = closest_option[3]
       else:
         newNode.analysis_ok = False
         newNode.error_code = 16 # Analysis: did not find startangle of bend
@@ -1348,7 +1368,16 @@ class SheetTree(object):
     e3 = Part.makeLine(e1.valueAt(e1.FirstParameter), e2.valueAt(e2.FirstParameter))
     e4 = Part.makeLine(e1.valueAt(e1.LastParameter), e2.valueAt(e2.LastParameter))
     w = Part.Wire([e1,e3,e2,e4])
-    return Part.Face(w)
+    try:
+      return Part.Face(w)
+    except:
+      SMLog("Failed to write part: {} ({} - {}, {} - {}, {} - {}, {} - {})".format(w.isClosed(), \
+        e1.valueAt(e1.FirstParameter), e1.valueAt(e1.LastParameter), \
+        e3.valueAt(e3.FirstParameter), e3.valueAt(e3.LastParameter), \
+        e2.valueAt(e2.FirstParameter), e2.valueAt(e2.LastParameter), \
+        e4.valueAt(e4.FirstParameter), e4.valueAt(e4.LastParameter)) \
+      )
+      raise
 
 
   def makeSeamFace(self, sEdge, theNode):
