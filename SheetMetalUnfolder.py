@@ -683,6 +683,12 @@ class SheetTree(object):
       faceMiddle = faceMiddle.multiply(1.0/len(self.__Shape.Faces[face_idx].OuterWire.Vertexes))
       
       # search for the counter face
+      class PossibleCounter :
+        def __init__(self, index, distance):
+          self.index = index
+          self.distance = distance
+
+      possible_counter_faces = []
       for i in such_list:
         counter_found = True
         for F_vert in self.f_list[i].Vertexes:
@@ -693,7 +699,7 @@ class SheetTree(object):
               counter_found = False
   
         if counter_found:
-          # nead a mean point of the face to avoid false counter faces
+          # need a mean point of the face to avoid false counter faces
           counterMiddle = Base.Vector(0.0,0.0,0.0) # calculating a mean vector
           for Vvec in self.__Shape.Faces[i].OuterWire.Vertexes:
               counterMiddle = counterMiddle.add(Vvec.Point)
@@ -702,18 +708,27 @@ class SheetTree(object):
           distVector = counterMiddle.sub(faceMiddle)
           counterDistance = distVector.Length
 
-          if counterDistance < self.__thickness:
-          # if counterDistance < 3*self.__thickness:
+          #if the face is an acceptable distance away, then add it to our possible list
+          if counterDistance < 3*self.__thickness:
             SMLog("found counter-face Face", i + 1, " for Face", face_idx +1, " with counterDistance of ", counterDistance)
-            newNode.c_face_idx = i
-            self.index_list.remove(i)
-            newNode.nfIndexes.append(i)
-            break
+            possible_counter_faces.append(PossibleCounter(i, counterDistance))
             # Part.show(self.__Shape.Faces[newNode.c_face_idx])
           else:
             counter_found = False
             SMLog("found false counter-face Face", i+1, " for Face", face_idx+1, " with counterDistance of ", counterDistance)
             SMLog("faceMiddle: ", str(faceMiddle), "counterMiddle: ", str(counterMiddle))
+
+      #if we have counter faces, then find the one nearest to this face
+      if len(possible_counter_faces) >= 1:
+        #find the nearest possible counter face
+        possible_counter_faces.sort(key=lambda face:face.distance)
+        nearest_face = possible_counter_faces[0].index
+
+        #remove the face from search lists and mark it as our counter
+        newNode.c_face_idx = nearest_face
+        self.index_list.remove(nearest_face)
+        newNode.nfIndexes.append(nearest_face)
+
       #if newNode.c_face_idx == None:
       #  Part.show(axis_line)
           
