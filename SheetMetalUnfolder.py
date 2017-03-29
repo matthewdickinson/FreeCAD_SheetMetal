@@ -195,6 +195,7 @@ class Simple_node(object):
 
 class SheetTree(object):
   def __init__(self, TheShape, f_idx):
+    self.num_bends = -1
     self.cFaceTol = 0.002 # tolerance to detect counter-face vertices
     # this high tolerance was needed for more real parts
     self.root = None # make_new_face_node adds the root node if parent_node == None
@@ -724,6 +725,9 @@ class SheetTree(object):
             # Part.show(self.__Shape.Faces[newNode.c_face_idx])
           else:
             counter_found = False
+            #update the number of bends by dropping it by one
+            #(since this face will be processed later, but is actually on the same plane, so is a single bend)
+            self.num_bends -= 1
             SMLog("found false counter-face Face", i+1, " for Face", face_idx+1, " with counterDistance of ", counterDistance)
             SMLog("faceMiddle: ", str(faceMiddle), "counterMiddle: ", str(counterMiddle))
 
@@ -737,6 +741,9 @@ class SheetTree(object):
         newNode.c_face_idx = nearest_face
         self.index_list.remove(nearest_face)
         newNode.nfIndexes.append(nearest_face)
+
+        #update the number of bends found (should be 1 for this minus any other possible items)
+        self.num_bends += 2 - len(possible_counter_faces)
 
       #if newNode.c_face_idx == None:
       #  Part.show(axis_line)
@@ -1574,6 +1581,7 @@ def PerformUnfold():
               QtGui.QMessageBox.information(mw,"Error",unfold_error[TheTree.error_code])
             else:
               SMMessage("unfold successful")
+              SMMessage("found ", TheTree.num_bends, " bends")
 
                     
           else:
